@@ -169,11 +169,11 @@ class JSONAPI_Doc {
             case 'post_date':
                 return array('date' => self::prepare_date_response($post['post_date_gmt'], $post['post_date']));
             case 'post_date_gmt':
-                return array('date_gmt' => self::prepare_date_response($post['post_date_gmt']));
+                return array('dateGmt' => self::prepare_date_response($post['post_date_gmt']));
             case 'post_modified':
                 return array('modified' => self::prepare_date_response($post['post_modified_gmt'], $post['post_modified']));
             case 'post_modified_gmt':
-                return array('date_gmt' => self::prepare_date_response($post['post_modified_gmt']));
+                return array('dateGmt' => self::prepare_date_response($post['post_modified_gmt']));
             case 'guid':
                 return array('guid' => apply_filters('get_the_guid', $post['guid']));
             case 'post_name':
@@ -203,14 +203,14 @@ class JSONAPI_Doc {
                     foreach ( $file as $f ) {
                         $files[] = $this->serialize_file( $file );
                     }
-                    return array( $attribute => $files );
+                    return array( self::camelize( $attribute ) => $files );
                 }
             }
 
         }
 
         /** @noinspection PhpUnreachableStatementInspection */
-        return array( $attribute => $post[ $attribute ] );
+        return array( self::camelize( $attribute ) => $post[ $attribute ] );
 
     }
 
@@ -245,12 +245,12 @@ class JSONAPI_Doc {
                 foreach ( $ids as $id ) {
                     array_push( $data, $this->serialize_relationship( $id, $type ) );
                 }
-                $relationships[ $key ] = array( 'data' => $data );
+                $relationships[ self::camelize($key) ] = array( 'data' => $data );
                 continue;
             }
 
             if ( $ids ) {
-                $relationships[ $key ] = array( 'data' => $this->serialize_relationship( $ids, $type ) );
+                $relationships[ self::camelize($key) ] = array( 'data' => $this->serialize_relationship( $ids, $type ) );
             }
         }
 
@@ -309,28 +309,28 @@ class JSONAPI_Doc {
 
         $attachment = array(
             'id'            => $id,
-            'alt_text'      => get_post_meta( $id, '_wp_attachment_image_alt', true ),
+            'altText'      => get_post_meta( $id, '_wp_attachment_image_alt', true ),
             'caption'       => $file['post_excerpt'],
             'description'   => $file['post_content'],
-            'meta_type'     => wp_attachment_is_image( $id ) ? 'image' : 'file',
-            'media_details' => wp_get_attachment_metadata( $id ),
+            'metaType'     => wp_attachment_is_image( $id ) ? 'image' : 'file',
+            'mediaDetails' => wp_get_attachment_metadata( $id ),
             'post'          => !empty( $file['post_parent'] ) ? (int) $file->post_parent : null,
-            'source_url'    => wp_get_attachment_url( $id )
+            'sourceUrl'    => wp_get_attachment_url( $id )
         );
 
 
-        if ( empty( $attachment['media_details'] ) ) {
-            $attachment['media_details'] = array();
-        } elseif ( !empty( $attachment['media_details']['sizes'] ) ) {
-            foreach ( $attachment['media_details']['sizes'] as $size => &$size_data ) {
+        if ( empty( $attachment['mediaDetails'] ) ) {
+            $attachment['mediaDetails'] = array();
+        } elseif ( !empty( $attachment['mediaDetails']['sizes'] ) ) {
+            foreach ( $attachment['mediaDetails']['sizes'] as $size => &$size_data ) {
                 $image_src = wp_get_attachment_image_src( $id, $size );
                 if ( ! $image_src ) {
                     continue;
                 }
-                $size_data['source_url'] = $image_src[0];
+                $size_data['sourceUrl'] = $image_src[0];
             }
         } else {
-            $featured_image['media_details']['sizes'] = [];
+            $featured_image['mediaDetails']['sizes'] = [];
         }
 
         return $attachment;
@@ -391,5 +391,14 @@ class JSONAPI_Doc {
      */
     protected static function is_array($array) {
         return !self::is_hash($array);
+    }
+
+    /**
+     * @source https://gist.github.com/troelskn/751517
+     * @param $underscored
+     * @return string
+     */
+    protected static function camelize( $string ) {
+        return lcfirst( implode( '', array_map( 'ucfirst', array_map( 'strtolower', preg_split( "/(_|-)/", $string )))));
     }
 }
