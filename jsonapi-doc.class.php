@@ -47,11 +47,12 @@ class JSONAPI_Doc {
         'menu_order',
         'ping_status',
         'post_content_filtered',
-        'post_type'
+        'post_type',
+        'featured_media'
     ];
 
     protected $relationship_fields = [
-        'post_author', 'featured_media', 'post_parent', 'post_tag', 'category'
+        'post_author', 'post_parent', 'post_tag', 'category'
     ];
 
     public function __construct( $id, $type ) {
@@ -59,21 +60,8 @@ class JSONAPI_Doc {
         $this->id = $id;
         $this->type = $type;
 
-        if ( 'media' === $type ) {
-            $post = $this->setup_media( $id );
-        } else {
-            $post = $post = $this->setup_pod( $id, $type );
-        }
+        $this->_post = $this->setup_pod( $id, $type );
 
-        $this->_post = $post;
-
-    }
-
-    private function setup_media( $id ) {
-
-        $post = get_post( $id );
-
-        return $post;
     }
 
     private function setup_pod( $id, $type ) {
@@ -90,9 +78,9 @@ class JSONAPI_Doc {
 
             if ( PodsRESTFields::field_allowed_to_extend( $pods_field_name, $pod, 'read' ) ) {
                 $output_type = pods_v('rest_pick_response', $pods_field_data['options'], 'array');
-                $isRelationship = 'pick' == pods_v('type', $pods_field_data) && 'id' == $output_type;
+                $isRelationship = 'pick' === pods_v('type', $pods_field_data) && 'id' == $output_type;
 
-                if ($isRelationship) {
+                if ( $isRelationship ) {
                     $relationships[] = $pods_field_name;
                 } else {
                     $attributes[] = $pods_field_name;
@@ -157,8 +145,9 @@ class JSONAPI_Doc {
     public function attributes() {
         $attributes = [];
         foreach ( $this->_attributes as $attribute ) {
-            if ( 'id' != $attribute || 'ID' != $attribute ) {
-                $attributes = array_merge( $attributes, $this->getAttribute( $attribute ) );
+            $field_data = $this->_pod->fields($attribute);
+            if ( 'id' != $attribute ) {
+                $attributes = array_merge( $attributes, $this->getAttribute( $attribute, $field_data ) );
             }
         }
         return $attributes;
@@ -171,7 +160,7 @@ class JSONAPI_Doc {
      * @param $attribute
      * @return array
      */
-    public function getAttribute( $attribute ) {
+    public function getAttribute( $attribute, $field_data ) {
 
         $id = $this->id;
         $post = $this->_post;
@@ -200,6 +189,24 @@ class JSONAPI_Doc {
             case 'format':
                 $format = get_post_format($id);
                 return array('format' => empty($format) ? 'standard' : $format);
+        }
+
+        if ( $field_data && 'file' === pods_v( 'type', $field_data ) ) {
+            $is_single = 'single' === pods_v('file_format_type', $field_data['options'], 'single');
+
+            $file = $post[$attribute];
+            if ( !empty( $file ) ) {
+                if ( $is_single && self::is_hash( $file ) ) {
+                    return array( $attribute => $this->serialize_file( $file ) );
+                } else if ( self::is_array( $file ) ) {
+                    $files = [];
+                    foreach ( $file as $f ) {
+                        $files[] = $this->serialize_file( $file );
+                    }
+                    return array( $attribute => $files );
+                }
+            }
+
         }
 
         /** @noinspection PhpUnreachableStatementInspection */
@@ -294,6 +301,39 @@ class JSONAPI_Doc {
     public function serialize_include( $id, $type ) {
         $doc = new JSONAPI_Doc( $id, $type );
         return $doc->doc();
+    }
+
+    public function serialize_file( $file ) {
+
+        $id = pods_v('ID', $file);
+
+        $attachment = array(
+            'id'            => $id,
+            'alt_text'      => get_post_meta( $id, '_wp_attachment_image_alt', true ),
+            'caption'       => $file['post_excerpt'],
+            'description'   => $file['post_content'],
+            'meta_type'     => wp_attachment_is_image( $id ) ? 'image' : 'file',
+            'media_details' => wp_get_attachment_metadata( $id ),
+            'post'          => !empty( $file['post_parent'] ) ? (int) $file->post_parent : null,
+            'source_url'    => wp_get_attachment_url( $id )
+        );
+
+
+        if ( empty( $attachment['media_details'] ) ) {
+            $attachment['media_details'] = array();
+        } elseif ( !empty( $attachment['media_details']['sizes'] ) ) {
+            foreach ( $attachment['media_details']['sizes'] as $size => &$size_data ) {
+                $image_src = wp_get_attachment_image_src( $id, $size );
+                if ( ! $image_src ) {
+                    continue;
+                }
+                $size_data['source_url'] = $image_src[0];
+            }
+        } else {
+            $featured_image['media_details']['sizes'] = [];
+        }
+
+        return $attachment;
     }
 
     /**
