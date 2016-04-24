@@ -16,6 +16,7 @@ class WP_REST_JSOINAPI_Serializer {
 
     static function initialize() {
         add_filter('rest_post_dispatch', 'JSONAPI_Serializer::rest_post_dispatch', 10, 4);
+        add_filter('rest_pre_serve_request', 'JSONAPI_Serializer::rest_pre_serve_request', 10, 4);
     }
 
 }
