@@ -318,19 +318,39 @@ class JSONAPI_Doc {
             'sourceUrl'    => wp_get_attachment_url( $id )
         );
 
-
         if ( empty( $attachment['mediaDetails'] ) ) {
+
             $attachment['mediaDetails'] = array();
+
         } elseif ( !empty( $attachment['mediaDetails']['sizes'] ) ) {
-            foreach ( $attachment['mediaDetails']['sizes'] as $size => &$size_data ) {
+
+            $sizes = $attachment['mediaDetails']['sizes'];
+            $_sizes = array();
+
+            foreach ( $sizes as $size => $size_data ) {
+
+                $camelized = self::camelize_keys( $size_data );
                 $image_src = wp_get_attachment_image_src( $id, $size );
-                if ( ! $image_src ) {
-                    continue;
+                if ( $image_src ) {
+                    $camelized['sourceUrl'] = $image_src[ 0 ];
                 }
-                $size_data['sourceUrl'] = $image_src[0];
+                $_sizes[ self::camelize( $size ) ] = $camelized;
+
             }
+
+            $attachment['mediaDetails']['sizes'] = $_sizes;
+
         } else {
-            $featured_image['mediaDetails']['sizes'] = [];
+
+            $attachment['mediaDetails']['sizes'] = [];
+
+        }
+
+        if ( !empty( $attachment['mediaDetails'][ 'image_meta' ] ) ) {
+
+            $attachment['mediaDetails']['imageMeta'] = self::camelize_keys( $attachment['mediaDetails'][ 'image_meta' ] );
+
+            unset( $attachment['mediaDetails']['image_meta'] );
         }
 
         return $attachment;
@@ -395,10 +415,29 @@ class JSONAPI_Doc {
 
     /**
      * @source https://gist.github.com/troelskn/751517
-     * @param $underscored
+     * @param $string
      * @return string
      */
     protected static function camelize( $string ) {
         return lcfirst( implode( '', array_map( 'ucfirst', array_map( 'strtolower', preg_split( "/(_|-)/", $string )))));
+    }
+
+    /**
+     * Camelize each key and return new array
+     *
+     * @param $array
+     * @return array
+     */
+    protected static function camelize_keys( $array ) {
+
+        if ( self::is_hash( $array ) ) {
+            $new = [];
+            foreach ( $array as $key => $value ) {
+                $new[ self::camelize( $key ) ] = $value;
+            }
+            return $new;
+        }
+
+        return $array;
     }
 }
