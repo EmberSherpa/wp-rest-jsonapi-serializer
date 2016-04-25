@@ -24,6 +24,8 @@ class JSONAPI_Serializer {
                     $included = array_merge($included, $doc->includes());
                 }
 
+                $included = self::remove_duplicates( $included );
+
                 $meta = array(
                     'total' => $result->headers['X-WP-Total'],
                     'totalPages' => $result->headers['X-WP-TotalPages']
@@ -54,6 +56,21 @@ class JSONAPI_Serializer {
         }
 
         return $result;
+    }
+
+    protected static function remove_duplicates( $array ) {
+        $seen = [];
+        $unique = [];
+
+        array_walk( $array, function( $val ) use ( &$seen, &$unique ) {
+            $index = "$val[type]::$val[id]";
+            if ( false === array_search( $index, $seen ) ) {
+                array_push( $seen, $index );
+                array_push( $unique, $val );
+            }
+        } );
+
+        return $unique;
     }
 
     /**
