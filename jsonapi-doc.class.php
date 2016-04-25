@@ -51,8 +51,7 @@ class JSONAPI_Doc {
         'menu_order',
         'ping_status',
         'post_content_filtered',
-        'post_type',
-        'featured_media'
+        'post_type'
     ];
 
     protected $relationship_fields = [
@@ -130,6 +129,10 @@ class JSONAPI_Doc {
             if ( self::remove( $relationship_key, $object_fields ) ) {
                 $relationships[] = $relationship_key;
             }
+        }
+
+        if ( pods_v('supports_thumbnail', $pod->pod_data['options'], 0) ) {
+            $attributes[] = 'featured';
         }
 
         $this->_pod = $pod;
@@ -218,6 +221,8 @@ class JSONAPI_Doc {
             case 'format':
                 $format = get_post_format($id);
                 return array('format' => empty($format) ? 'standard' : $format);
+            case 'featured':
+                return array('featured' => $this->serialize_file( get_post( get_post_thumbnail_id( $id ), ARRAY_A ) ) );
         }
 
         if ( $field_data && 'file' === pods_v( 'type', $field_data ) ) {
