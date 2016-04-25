@@ -19,21 +19,25 @@ class JSONAPI_Doc {
             'key' => 'author',
             'type' => 'user'
         ),
-        'featured_media' => array(
-            'key' => 'featured',
-            'type' => 'media'
-        ),
         'post_parent' => array(
             'key' => 'parent',
             'type' => '__current__'
         ),
         'post_tag' => array(
             'key' => 'tags',
-            'type' => 'tag'
+            'type' => 'post_tag'
         ),
         'category' => array(
             'key' => 'categories',
             'type' => 'category'
+        ),
+        'term_taxonomy_id' => array(
+            'key' => 'taxonomy',
+            'type' => 'taxonomy'
+        ),
+        'term_parent' => array(
+            'key' => 'parent',
+            'type' => '__current__'
         )
     );
 
@@ -60,8 +64,27 @@ class JSONAPI_Doc {
         $this->id = $id;
         $this->type = $type;
 
-        $this->_post = $this->setup_pod( $id, $type );
+        if ( 'category' === $type || 'post_tag' === $type ) {
+            $this->_post = $this->setup_term( $id, $type );
+        } else {
+            $this->_post = $this->setup_pod( $id, $type );
+        }
 
+    }
+
+    private function setup_term( $id, $type ) {
+
+        $term = get_term( $id, $type, ARRAY_A );
+
+        $parent = $term[ 'parent' ];
+        if ( self::remove( 'parent', $term ) ) {
+            $term[ 'term_parent' ] = $parent;
+        }
+
+        $this->_attributes = [ 'name', 'slug', 'description' ];
+        $this->_relationships = [ 'term_taxonomy_id', 'term_parent' ];
+
+        return $term;
     }
 
     private function setup_pod( $id, $type ) {
@@ -144,8 +167,13 @@ class JSONAPI_Doc {
 
     public function attributes() {
         $attributes = [];
+
         foreach ( $this->_attributes as $attribute ) {
-            $field_data = $this->_pod->fields($attribute);
+            $field_data = null;
+            if ( $this->hasPod() ) {
+                $field_data = $this->_pod->fields($attribute);
+            }
+
             if ( 'id' != $attribute ) {
                 $attributes = array_merge( $attributes, $this->getAttribute( $attribute, $field_data ) );
             }
@@ -220,38 +248,61 @@ class JSONAPI_Doc {
 
         foreach ( $this->_relationships as $relationship ) {
             $ids = $this->_post[ $relationship ]; // relationship data
-            $field_data = $this->_pod->fields($relationship);
+
+            $field_data = null;
+
+            if ( $this->hasPod() ) {
+                $field_data = $this->_pod->fields($relationship);
+            }
 
             if ( isset( $this->wp_relationships[ $relationship ] ) ) {
+
                 $key = $this->wp_relationships[ $relationship ]['key'];
+
                 if ( $field_data ) {
+
                     $type = pods_v( 'pick_object', $field_data );
+
                     if ( 'post_type' === $type ) {
+
                         $pick_val = pods_v( 'pick_val', $field_data );
+
                         if ( '__current__' === $pick_val ) {
                             $type = pods_v( 'pod', $this->_pod );
                         }
+
+                    } else if ( 'taxonomy' === $type ) {
+                        $type = pods_v( 'pick_val', $field_data );
                     }
+
                 } else {
+
                     $type = $this->wp_relationships[ $relationship ]['type'];
+
                 }
+
             } else {
+
                 $key = $relationship;
                 $type = pods_v( 'pick_val', $field_data );
+
             }
 
             $data = [];
 
-            if ( 'array' == gettype( $ids ) ) {
+            if ( 'array' == gettype( $ids ) && !self::is_hash( $ids ) ) {
+
                 foreach ( $ids as $id ) {
                     array_push( $data, $this->serialize_relationship( $id, $type ) );
                 }
-                $relationships[ self::dasherize($key) ] = array( 'data' => $data );
+
+                $relationships[ self::dasherize( $key ) ] = array( 'data' => $data );
                 continue;
+
             }
 
             if ( $ids ) {
-                $relationships[ self::dasherize($key) ] = array( 'data' => $this->serialize_relationship( $ids, $type ) );
+                $relationships[ self::dasherize( $key ) ] = array( 'data' => $this->serialize_relationship( $ids, $type ) );
             }
         }
 
@@ -266,8 +317,9 @@ class JSONAPI_Doc {
      * @return array
      */
     public function serialize_relationship( $id, $type ) {
-        if ( 'taxonomy' === $type && self::is_hash( $id ) ) {
+        if ( self::is_hash( $id ) && isset( $id['taxonomy'] ) ) {
             $id = pods_v( 'term_id', $id );
+
         }
         return array(
             'id' => $id,
@@ -349,12 +401,16 @@ class JSONAPI_Doc {
 
         if ( !empty( $attachment['media-details'][ 'image_meta' ] ) ) {
 
-            $attachment['media-details']['image-meta'] = self::dasherize_keys( $attachment['media-details'][ 'image_meta' ] );
+            $attachment['media-details']['image-meta'] = self::dasherize_keys( $attachment['media-details']['image_meta'] );
 
             unset( $attachment['media-details']['image_meta'] );
         }
 
         return $attachment;
+    }
+
+    public function hasPod() {
+        return !is_null( $this->_pod );
     }
 
     /**

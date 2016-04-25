@@ -14,7 +14,7 @@ class JSONAPI_Serializer {
             $included = [];
             $meta = null;
 
-            if ( self::isQuery($result) ) {
+            if ( self::isQuery( $result ) ) {
 
                 foreach ( $result->data as $post ) {
                     $doc = new JSONAPI_Doc($post['id'], $post['type']);
