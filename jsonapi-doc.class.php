@@ -158,6 +158,7 @@ class JSONAPI_Doc {
      * Key will represent the attribute name that should be used for that attribute.
      *
      * @param $attribute
+     * @param $field_data
      * @return array
      */
     public function getAttribute( $attribute, $field_data ) {
@@ -197,7 +198,7 @@ class JSONAPI_Doc {
             $file = $post[$attribute];
             if ( !empty( $file ) ) {
                 if ( $is_single && self::is_hash( $file ) ) {
-                    return array( $attribute => $this->serialize_file( $file ) );
+                    return array( self::camelize( $attribute ) => $this->serialize_file( $file ) );
                 } else if ( self::is_array( $file ) ) {
                     $files = [];
                     foreach ( $file as $f ) {
