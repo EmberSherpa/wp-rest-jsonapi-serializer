@@ -388,7 +388,7 @@ class JSONAPI_Doc {
      */
     protected static function remove( $needle, & $haystack ) {
         $index = array_search( $needle, $haystack );
-        if ( is_null( $index ) && false === $index ) {
+        if ( is_null( $index ) || false === $index ) {
             return false;
         }
         return !empty( array_splice( $haystack, $index, 1 ) );
