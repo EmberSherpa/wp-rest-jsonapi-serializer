@@ -28,7 +28,7 @@ class JSONAPI_Serializer {
 
                 $meta = array(
                     'total' => $result->headers['X-WP-Total'],
-                    'totalPages' => $result->headers['X-WP-TotalPages'],
+                    'total-pages' => $result->headers['X-WP-TotalPages'],
                     'page' => get_query_var('page') ? get_query_var('page') : 1
                 );
 
