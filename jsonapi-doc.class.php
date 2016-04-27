@@ -371,44 +371,24 @@ class JSONAPI_Doc {
             'caption'       => $file['post_excerpt'],
             'description'   => $file['post_content'],
             'meta-type'     => wp_attachment_is_image( $id ) ? 'image' : 'file',
-            'media-details' => wp_get_attachment_metadata( $id ),
             'post'          => !empty( $file['post_parent'] ) ? (int) $file->post_parent : null,
-            'source-url'    => wp_get_attachment_url( $id )
+            'url'    => wp_get_attachment_url( $id )
         );
 
-        if ( empty( $attachment['media-details'] ) ) {
+        $media = wp_get_attachment_metadata( $id );
 
-            $attachment['media-details'] = array();
+        if ( $media && !empty( $media[ 'sizes' ] ) ) {
 
-        } elseif ( !empty( $attachment['media-details']['sizes'] ) ) {
+            foreach ( $media['sizes'] as $size => $data ) {
 
-            $sizes = $attachment['media-details']['sizes'];
-            $_sizes = array();
-
-            foreach ( $sizes as $size => $size_data ) {
-
-                $camelized = self::dasherize_keys( $size_data );
+                $camelized = self::dasherize_keys( $data );
                 $image_src = wp_get_attachment_image_src( $id, $size );
                 if ( $image_src ) {
-                    $camelized['source-url'] = $image_src[ 0 ];
+                    $camelized['url'] = $image_src[ 0 ];
                 }
-                $_sizes[ self::dasherize( $size ) ] = $camelized;
+                $attachment[ self::dasherize( $size ) ] = $camelized;
 
             }
-
-            $attachment['media-details']['sizes'] = $_sizes;
-
-        } else {
-
-            $attachment['media-details']['sizes'] = [];
-
-        }
-
-        if ( !empty( $attachment['media-details'][ 'image_meta' ] ) ) {
-
-            $attachment['media-details']['image-meta'] = self::dasherize_keys( $attachment['media-details']['image_meta'] );
-
-            unset( $attachment['media-details']['image_meta'] );
         }
 
         return $attachment;
