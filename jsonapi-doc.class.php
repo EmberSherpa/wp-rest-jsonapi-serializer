@@ -371,14 +371,13 @@ class JSONAPI_Doc {
             'caption'       => $file['post_excerpt'],
             'description'   => $file['post_content'],
             'meta-type'     => wp_attachment_is_image( $id ) ? 'image' : 'file',
-            'post'          => !empty( $file['post_parent'] ) ? (int) $file->post_parent : null,
-            'url'    => wp_get_attachment_url( $id )
+            'parent'        => !empty( $file['post_parent'] ) ? (int) $file->post_parent : null,
+            'url'           => wp_get_attachment_url( $id )
         );
 
         $media = wp_get_attachment_metadata( $id );
 
         if ( $media && !empty( $media[ 'sizes' ] ) ) {
-
             foreach ( $media['sizes'] as $size => $data ) {
 
                 $camelized = self::dasherize_keys( $data );
@@ -389,6 +388,8 @@ class JSONAPI_Doc {
                 $attachment[ self::dasherize( $size ) ] = $camelized;
 
             }
+
+            $attachment['sizes'] = array_keys( $media['sizes'] );
         }
 
         return $attachment;
