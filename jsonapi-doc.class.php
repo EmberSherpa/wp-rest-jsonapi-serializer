@@ -25,7 +25,7 @@ class JSONAPI_Doc {
         ),
         'post_tag' => array(
             'key' => 'tags',
-            'type' => 'post_tag'
+            'type' => 'tag'
         ),
         'category' => array(
             'key' => 'categories',
@@ -63,7 +63,7 @@ class JSONAPI_Doc {
         $this->id = $id;
         $this->type = $type;
 
-        if ( 'category' === $type || 'post_tag' === $type ) {
+        if ( 'category' === $type || 'tag' === $type ) {
             $this->_post = $this->setup_term( $id, $type );
         } else {
             $this->_post = $this->setup_pod( $id, $type );
@@ -72,6 +72,10 @@ class JSONAPI_Doc {
     }
 
     private function setup_term( $id, $type ) {
+
+        if ( 'tag' === $type ) {
+            $type = 'post_tag';
+        }
 
         $term = get_term( $id, $type, ARRAY_A );
 
@@ -152,7 +156,7 @@ class JSONAPI_Doc {
     public function doc() {
         $doc = array(
             'id' => $this->id,
-            'type' => $this->type
+            'type' => self::dasherize( $this->type )
         );
 
         $attributes = $this->attributes();
@@ -263,6 +267,7 @@ class JSONAPI_Doc {
             if ( isset( $this->wp_relationships[ $relationship ] ) ) {
 
                 $key = $this->wp_relationships[ $relationship ]['key'];
+                $post_type = $this->wp_relationships[ $relationship ]['type'];
 
                 if ( $field_data ) {
 
@@ -277,7 +282,7 @@ class JSONAPI_Doc {
                         }
 
                     } else if ( 'taxonomy' === $type ) {
-                        $type = pods_v( 'pick_val', $field_data );
+                        $type = !empty( $post_type ) ? $post_type : pods_v( 'pick_val', $field_data );
                     }
 
                 } else {
@@ -327,8 +332,8 @@ class JSONAPI_Doc {
 
         }
         return array(
-            'id' => $id,
-            'type' => $type
+            'id' => (string) $id,
+            'type' => self::dasherize( $type )
         );
     }
 
@@ -366,7 +371,7 @@ class JSONAPI_Doc {
         $id = pods_v('ID', $file);
 
         $attachment = array(
-            'id'            => $id,
+            'id'            => (string) $id,
             'alt-text'      => get_post_meta( $id, '_wp_attachment_image_alt', true ),
             'caption'       => $file['post_excerpt'],
             'description'   => $file['post_content'],
