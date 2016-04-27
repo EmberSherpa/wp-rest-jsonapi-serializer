@@ -4,7 +4,7 @@ Plugin Name: WP-REST JSONAPI Serializer
 Plugin URI: http://github.com/EmberSherpa/wp-rest-jsonapi-serializer
 GitHub Plugin URI: EmberSherpa/wp-rest-jsonapi-serializer
 Description: Converts WP REST API Response to JSONAPI spec
-Version: 1.1.1
+Version: 1.1.3
 Author: Taras Mankovski
 Author URI: http://www.embersherpa.com
 License: GPL2
