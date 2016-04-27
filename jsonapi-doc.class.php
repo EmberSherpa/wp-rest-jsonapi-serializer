@@ -63,7 +63,7 @@ class JSONAPI_Doc {
         $this->id = $id;
         $this->type = $type;
 
-        if ( 'category' === $type || 'tag' === $type ) {
+        if ( 'category' === $type || 'tag' === $type || 'post_tag' === $type ) {
             $this->_post = $this->setup_term( $id, $type );
         } else {
             $this->_post = $this->setup_pod( $id, $type );

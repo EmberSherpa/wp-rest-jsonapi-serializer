@@ -17,7 +17,7 @@ class JSONAPI_Serializer {
             if ( self::isQuery( $result ) ) {
 
                 foreach ( $result->data as $post ) {
-                    $doc = new JSONAPI_Doc($post['id'], $post['type']);
+                    $doc = self::serialize( $post );
 
                     $data[] = $doc->doc();
 
@@ -34,7 +34,7 @@ class JSONAPI_Serializer {
             } else {
 
                 if ( !empty( $result->data ) ) {
-                    $doc = new JSONAPI_Doc($result->data['id'], $result->data['type']);
+                    $doc = self::serialize( $result->data );
 
                     $data = $doc->doc();
                     $included = $doc->includes();
@@ -56,6 +56,15 @@ class JSONAPI_Serializer {
         }
 
         return $result;
+    }
+
+    static function serialize( $post ) {
+
+        $type = isset( $post['type'] ) ? $post['type'] : $post['taxonomy'];
+
+        $doc = new JSONAPI_Doc($post['id'], $type);
+
+        return $doc;
     }
 
     protected static function remove_duplicates( $array ) {
