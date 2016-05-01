@@ -35,7 +35,7 @@ class JSONAPI_Doc {
             'key' => 'taxonomy',
             'type' => 'taxonomy'
         ),
-        'term_parent' => array(
+        'parent' => array(
             'key' => 'parent',
             'type' => '__current__'
         )
@@ -61,7 +61,7 @@ class JSONAPI_Doc {
     public function __construct( $id, $type ) {
 
         $this->id = $id;
-        $this->type = $type;
+        $this->type = 'post_tag' === $type ? 'tag' : $type;
 
         if ( 'category' === $type || 'tag' === $type || 'post_tag' === $type ) {
             $this->_post = $this->setup_term( $id, $type );
@@ -79,13 +79,8 @@ class JSONAPI_Doc {
 
         $term = get_term( $id, $type, ARRAY_A );
 
-        $parent = $term[ 'parent' ];
-        if ( self::remove( 'parent', $term ) ) {
-            $term[ 'term_parent' ] = $parent;
-        }
-
         $this->_attributes = [ 'name', 'slug', 'description' ];
-        $this->_relationships = [ 'term_taxonomy_id', 'term_parent' ];
+        $this->_relationships = [ 'parent' ];
 
         return $term;
     }
@@ -155,7 +150,7 @@ class JSONAPI_Doc {
 
     public function doc() {
         $doc = array(
-            'id' => $this->id,
+            'id' => (string) $this->id,
             'type' => self::dasherize( $this->type )
         );
 
@@ -289,6 +284,9 @@ class JSONAPI_Doc {
 
                     $type = $this->wp_relationships[ $relationship ]['type'];
 
+                    if ( '__current__' === $type ) {
+                        $type = $this->type;
+                    }
                 }
 
             } else {
@@ -435,6 +433,13 @@ class JSONAPI_Doc {
      * @return bool
      */
     protected static function remove( $needle, & $haystack ) {
+        if ( self::is_hash( $haystack ) ) {
+            if ( isset( $haystack[ $needle ] ) ) {
+                unset($haystack[ $needle ]);
+                return true;
+            }
+            return false;
+        };
         $index = array_search( $needle, $haystack );
         if ( is_null( $index ) || false === $index ) {
             return false;
@@ -449,7 +454,7 @@ class JSONAPI_Doc {
      * @return bool
      */
     protected static function is_hash($array) {
-        return array_keys($array) !== range(0, count($array) - 1);
+        return 'array' === gettype($array) && array_keys($array) !== range(0, count($array) - 1);
     }
 
     /**
