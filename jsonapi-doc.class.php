@@ -214,7 +214,7 @@ class JSONAPI_Doc {
             case 'post_content':
                 return array('content' => apply_filters('the_content', $post['post_content']));
             case 'post_excerpt':
-                return array('excerpt' => apply_filters('the_excerpt', apply_filters('get_the_excerpt', $post['post_excerpt'])));
+                return array('excerpt' => apply_filters('the_excerpt', $post['post_excerpt']));
             case 'sticky':
                 return array('sticky' => is_sticky($id));
             case 'format':
