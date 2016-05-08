@@ -63,7 +63,7 @@ class JSONAPI_Serializer {
 
         $type = isset( $post['type'] ) ? $post['type'] : $post['taxonomy'];
 
-        $doc = new JSONAPI_Doc($post['id'], $type);
+        $doc = new JSONAPI_Doc( $post['id'], $type );
 
         return $doc;
     }

@@ -51,7 +51,14 @@ class JSONAPI_Doc {
         'menu_order',
         'ping_status',
         'post_content_filtered',
-        'post_type'
+        'post_type',
+        'comment_count',
+        'filter',
+        'ancestors',
+        'page_template',
+        'tags_input',
+        'post_category',
+        'post_mime_type'
     ];
 
     protected $relationship_fields = [
@@ -63,12 +70,43 @@ class JSONAPI_Doc {
         $this->id = $id;
         $this->type = 'post_tag' === $type ? 'tag' : $type;
 
-        if ( 'category' === $type || 'tag' === $type || 'post_tag' === $type ) {
-            $this->_post = $this->setup_term( $id, $type );
-        } else {
-            $this->_post = $this->setup_pod( $id, $type );
+
+        switch($type) {
+            case 'category':
+            case 'tag':
+            case 'post_tag':
+                $this->_post = $this->setup_term( $id, $type );
+                break;
+            case 'page':
+                $this->_post = $this->setup_page( $id, $type );
+                break;
+            default:
+                $this->_post = $this->setup_pod( $id, $type );
         }
 
+    }
+
+    private function setup_page( $id, $type ) {
+
+        $page = get_post( $id, ARRAY_A );
+
+        $relationships = [];
+        $object_fields = array_keys($page);
+
+        foreach ( $this->unnecessary_fields as $to_be_removed ) {
+            self::remove( $to_be_removed, $object_fields );
+        }
+
+        foreach ( $this->relationship_fields as $relationship_key ) {
+            if ( self::remove( $relationship_key, $object_fields ) ) {
+                $relationships[] = $relationship_key;
+            }
+        }
+
+        $this->_attributes = $object_fields;
+        $this->_relationships = $relationships;
+
+        return $page;
     }
 
     private function setup_term( $id, $type ) {
@@ -200,11 +238,11 @@ class JSONAPI_Doc {
             case 'post_date':
                 return array('date' => self::prepare_date_response($post['post_date_gmt'], $post['post_date']));
             case 'post_date_gmt':
-                return array('dateGmt' => self::prepare_date_response($post['post_date_gmt']));
+                return array('date-gmt' => self::prepare_date_response($post['post_date_gmt']));
             case 'post_modified':
                 return array('modified' => self::prepare_date_response($post['post_modified_gmt'], $post['post_modified']));
             case 'post_modified_gmt':
-                return array('dateGmt' => self::prepare_date_response($post['post_modified_gmt']));
+                return array('modified-gmt' => self::prepare_date_response($post['post_modified_gmt']));
             case 'guid':
                 return array('guid' => apply_filters('get_the_guid', $post['guid']));
             case 'post_name':
