@@ -78,6 +78,7 @@ class JSONAPI_Doc {
                 $this->_post = $this->setup_term( $id, $type );
                 break;
             case 'page':
+            case 'post':
                 $this->_post = $this->setup_page( $id, $type );
                 break;
             default:
